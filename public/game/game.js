@@ -1715,11 +1715,13 @@ function drawFighter(x, y, color, isPlayer, scale = 1, facingX = 1, hitFlash = 0
   ctx.translate(Math.round(x), Math.round(y + bob));
   ctx.scale(facingX < 0 ? -1 : 1, 1);
   ctx.imageSmoothingEnabled = false;
-  const sprite = getPreparedSprite(spriteAsset);
+  const baseSprite = getPreparedSprite(spriteAsset);
+  const sprite = baseSprite?.isPixelSheet && animation && baseSprite.attackFrame ? baseSprite.attackFrame : baseSprite;
   if (sprite) {
     const ratio = sprite.width / sprite.height;
-    const targetHeight = 104 * scale;
-    const targetWidth = Math.min(targetHeight * ratio, 78 * scale);
+    const targetHeight = (sprite.isPixelSheet || baseSprite.isPixelSheet ? 120 : 104) * scale;
+    const targetWidth = Math.min(targetHeight * ratio, (baseSprite.isPixelSheet ? 260 : 78) * scale);
+    if (baseSprite.isPixelSheet && !animation) { const breathe = 1 + Math.sin(state.elapsed * 5 + x) * 0.02; ctx.scale(1 / breathe, breathe); }
     const drawnHeight = Math.min(targetHeight, targetWidth / ratio);
     const frame = Math.floor(state.elapsed * (animation ? 12 : 5)) % 4;
     const scalePulse = animation ? 1 + (frame % 2) * 0.035 : 1;
