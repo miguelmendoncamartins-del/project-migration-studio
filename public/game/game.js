@@ -1919,7 +1919,7 @@ function draw() {
   if (state.screenShake > 0) ctx.translate((Math.random() - 0.5) * state.screenShake, (Math.random() - 0.5) * state.screenShake);
   drawBackground();
   const drawables = state.enemies.filter((enemy) => enemy.hp > 0).map((enemy) => ({ y: enemy.y, draw: () => {
-    drawFighter(enemy.x, enemy.y, enemy.hitFlash > 0 ? '#ffffff' : enemy.color, false, enemy.size, state.player.x < enemy.x ? -1 : 1, enemy.hitFlash, 0, enemy.spriteAsset);
+    drawFighter(enemy.x, enemy.y, enemy.hitFlash > 0 ? '#ffffff' : enemy.color, false, enemy.size, state.player.x < enemy.x ? -1 : 1, enemy.hitFlash, (enemy.attackTimer ?? 9) < 0.35 ? 1 : 0, enemy.spriteAsset);
     if (enemy.empowered) {
       ctx.globalAlpha = 0.4 + Math.sin(state.elapsed * 7) * 0.13;
       ctx.strokeStyle = enemy.id === 'dio-heaven' ? '#f0d75a' : '#e18dca';
