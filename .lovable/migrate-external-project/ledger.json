@@ -1,0 +1,5 @@
+[{"capability":"code","source":"static Phaser game","outcome":"hosted unchanged under public/game","status":"verified","next_action":"none"},
+{"capability":"sprites","source":"Jojo-Sprite","outcome":"copied","status":"verified","next_action":"none"},
+{"capability":"save progress","source":"browser localStorage","outcome":"kept","status":"verified","next_action":"none"},
+{"capability":"database/auth","source":"none","outcome":"not applicable","status":"verified","next_action":"none"},
+{"capability":"github pages deploy","source":".github/workflows","outcome":"replaced by Lovable publish","status":"accepted","next_action":"publish"}]
