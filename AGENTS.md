@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- The imported Phaser game lives unchanged as static files in public/game and is shown full-screen from the home page; edit the game there, not in React, to keep it identical to the original.
