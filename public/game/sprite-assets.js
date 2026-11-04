@@ -277,6 +277,23 @@ export function prepareSpriteImage(image, maxWidth = 256, maxHeight = 384) {
   return depthCanvas;
 }
 
+// Original pixel-art sheets: left half = idle, right half = attack (with Stand).
+export function preparePixelSheet(image) {
+  const w = image.naturalWidth, h = image.naturalHeight, half = Math.floor(w / 2);
+  const src = document.createElement('canvas'); src.width = w; src.height = h;
+  const sc = src.getContext('2d'); sc.drawImage(image, 0, 0);
+  const data = sc.getImageData(0, 0, w, h).data;
+  const bounds = (x0, x1) => { let l = x1, r = x0, t = h, b = 0;
+    for (let y = 0; y < h; y += 1) for (let x = x0; x < x1; x += 1) if (data[(y * w + x) * 4 + 3] > 40) { if (x < l) l = x; if (x > r) r = x; if (y < t) t = y; if (y > b) b = y; }
+    return { l, r, t, b }; };
+  const a = bounds(0, half), c = bounds(half, w);
+  const top = Math.min(a.t, c.t), bottom = Math.max(a.b, c.b), height = bottom - top + 1;
+  const cut = (box) => { const out = document.createElement('canvas'); out.width = Math.max(1, box.r - box.l + 1); out.height = height;
+    const o = out.getContext('2d'); o.imageSmoothingEnabled = false; o.drawImage(src, box.l, top, out.width, height, 0, 0, out.width, height); return out; };
+  const idle = cut(a); idle.attackFrame = cut(c); idle.isPixelSheet = true;
+  return idle;
+}
+
 function imageMimeType(bytes) {
   if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
   if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return 'image/png';
@@ -294,6 +311,16 @@ export async function loadSpriteImages(requestedAssets = spriteAssets, onProgres
       const asset = queue.shift();
       let objectUrl;
       try {
+        const pixelUrl = new URL(`./pixel-sprites/${asset.directory}/${asset.name}.png`, document.baseURI).href;
+        const pixelResponse = await fetch(pixelUrl).catch(() => null);
+        if (pixelResponse?.ok && (pixelResponse.headers.get('content-type') || '').includes('image')) {
+          const pixelImage = new Image();
+          pixelImage.src = URL.createObjectURL(await pixelResponse.blob());
+          await pixelImage.decode();
+          prepared.set(asset.key, preparePixelSheet(pixelImage));
+          URL.revokeObjectURL(pixelImage.src);
+          continue;
+        }
         const response = await fetch(asset.url);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const bytes = await response.arrayBuffer();

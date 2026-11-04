@@ -1715,11 +1715,13 @@ function drawFighter(x, y, color, isPlayer, scale = 1, facingX = 1, hitFlash = 0
   ctx.translate(Math.round(x), Math.round(y + bob));
   ctx.scale(facingX < 0 ? -1 : 1, 1);
   ctx.imageSmoothingEnabled = false;
-  const sprite = getPreparedSprite(spriteAsset);
+  const baseSprite = getPreparedSprite(spriteAsset);
+  const sprite = baseSprite?.isPixelSheet && animation && baseSprite.attackFrame ? baseSprite.attackFrame : baseSprite;
   if (sprite) {
     const ratio = sprite.width / sprite.height;
-    const targetHeight = 104 * scale;
-    const targetWidth = Math.min(targetHeight * ratio, 78 * scale);
+    const targetHeight = (sprite.isPixelSheet || baseSprite.isPixelSheet ? 120 : 104) * scale;
+    const targetWidth = Math.min(targetHeight * ratio, (baseSprite.isPixelSheet ? 260 : 78) * scale);
+    if (baseSprite.isPixelSheet && !animation) { const breathe = 1 + Math.sin(state.elapsed * 5 + x) * 0.02; ctx.scale(1 / breathe, breathe); }
     const drawnHeight = Math.min(targetHeight, targetWidth / ratio);
     const frame = Math.floor(state.elapsed * (animation ? 12 : 5)) % 4;
     const scalePulse = animation ? 1 + (frame % 2) * 0.035 : 1;
@@ -1917,7 +1919,7 @@ function draw() {
   if (state.screenShake > 0) ctx.translate((Math.random() - 0.5) * state.screenShake, (Math.random() - 0.5) * state.screenShake);
   drawBackground();
   const drawables = state.enemies.filter((enemy) => enemy.hp > 0).map((enemy) => ({ y: enemy.y, draw: () => {
-    drawFighter(enemy.x, enemy.y, enemy.hitFlash > 0 ? '#ffffff' : enemy.color, false, enemy.size, state.player.x < enemy.x ? -1 : 1, enemy.hitFlash, 0, enemy.spriteAsset);
+    drawFighter(enemy.x, enemy.y, enemy.hitFlash > 0 ? '#ffffff' : enemy.color, false, enemy.size, state.player.x < enemy.x ? -1 : 1, enemy.hitFlash, (enemy.attackTimer ?? 9) < 0.35 ? 1 : 0, enemy.spriteAsset);
     if (enemy.empowered) {
       ctx.globalAlpha = 0.4 + Math.sin(state.elapsed * 7) * 0.13;
       ctx.strokeStyle = enemy.id === 'dio-heaven' ? '#f0d75a' : '#e18dca';
