@@ -1932,18 +1932,19 @@ function draw() {
       ctx.textAlign = 'center';
       ctx.fillText('✦', enemy.x, enemy.y - 54);
     }
+    const labelOffset = getPreparedSprite(enemy.spriteAsset)?.isPixelSheet ? 128 * enemy.size : 57;
     ctx.fillStyle = '#161a18';
-    ctx.fillRect(enemy.x - 33, enemy.y - 57, 66, 5);
+    ctx.fillRect(enemy.x - 33, enemy.y - labelOffset, 66, 5);
     ctx.fillStyle = enemy.empowered ? '#f0d75a' : '#e78465';
-    ctx.fillRect(enemy.x - 32, enemy.y - 56, 64 * Math.max(0, enemy.hp / enemy.maxHp), 3);
+    ctx.fillRect(enemy.x - 32, enemy.y - labelOffset + 1, 64 * Math.max(0, enemy.hp / enemy.maxHp), 3);
     ctx.fillStyle = '#f0eee0';
     ctx.font = '9px "DM Mono", monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(enemy.name, enemy.x, enemy.y - 66);
+    ctx.fillText(enemy.name, enemy.x, enemy.y - labelOffset - 9);
   } }));
   drawables.push({ y: state.player.y, draw: () => {
     const character = selectedCharacter();
-    if (character.part >= 3 && character.part <= 9) drawStand(state.player.x, state.player.y, character, state.player.facingX);
+    if (character.part >= 3 && character.part <= 9 && !getPreparedSprite(character.spriteAsset)?.isPixelSheet) drawStand(state.player.x, state.player.y, character, state.player.facingX);
     if (character.id === 'jotaro' && state.jotaroAwakened && state.mode === 'final' && state.secretPhase === 2) {
       ctx.globalAlpha = 0.84;
       drawFighter(state.player.x + 24, state.player.y - 8, '#edc857', false, 0.88, state.player.facingX, 0, state.player.attackTimer);
@@ -1953,7 +1954,7 @@ function draw() {
     ctx.fillStyle = '#fff6cf';
     ctx.font = '9px "DM Mono", monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(character.short, state.player.x, state.player.y - 54);
+    ctx.fillText(character.short, state.player.x, state.player.y - (getPreparedSprite(character.spriteAsset)?.isPixelSheet ? 128 : 54));
   } });
   if (state.assist) {
     drawables.push({ y: state.player.y + 12, draw: () => {
