@@ -1943,7 +1943,7 @@ function draw() {
   } }));
   drawables.push({ y: state.player.y, draw: () => {
     const character = selectedCharacter();
-    if (character.part >= 3 && character.part <= 9) drawStand(state.player.x, state.player.y, character, state.player.facingX);
+    if (character.part >= 3 && character.part <= 9 && !getPreparedSprite(character.spriteAsset)?.isPixelSheet) drawStand(state.player.x, state.player.y, character, state.player.facingX);
     if (character.id === 'jotaro' && state.jotaroAwakened && state.mode === 'final' && state.secretPhase === 2) {
       ctx.globalAlpha = 0.84;
       drawFighter(state.player.x + 24, state.player.y - 8, '#edc857', false, 0.88, state.player.facingX, 0, state.player.attackTimer);
