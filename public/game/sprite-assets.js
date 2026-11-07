@@ -294,6 +294,25 @@ export function preparePixelSheet(image) {
   return idle;
 }
 
+async function loadAnimationFrames(asset, base) {
+  base.frames = {};
+  await Promise.all(['idle', 'walk', 'special'].map(async (action) => {
+    const image = new Image();
+    image.src = new URL(`./pixel-sprites/animations/${asset.directory}/${asset.name}/${action}.png`, document.baseURI).href;
+    await image.decode();
+    base.frames[action] = Array.from({ length: 4 }, (_, index) => {
+      const frame = document.createElement('canvas');
+      frame.width = image.naturalWidth / 4; frame.height = image.naturalHeight;
+      const context = frame.getContext('2d');
+      context.imageSmoothingEnabled = false;
+      context.drawImage(image, index * frame.width, 0, frame.width, frame.height, 0, 0, frame.width, frame.height);
+      return frame;
+    });
+  }));
+  base.frames.attack = [base.attackFrame, base.attackFrame, base.attackFrame, base.attackFrame];
+  return base;
+}
+
 function imageMimeType(bytes) {
   if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
   if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return 'image/png';
@@ -317,7 +336,9 @@ export async function loadSpriteImages(requestedAssets = spriteAssets, onProgres
           const pixelImage = new Image();
           pixelImage.src = URL.createObjectURL(await pixelResponse.blob());
           await pixelImage.decode();
-          prepared.set(asset.key, preparePixelSheet(pixelImage));
+          const sprite = preparePixelSheet(pixelImage);
+          try { await loadAnimationFrames(asset, sprite); } catch { /* Legacy sheet remains available. */ }
+          prepared.set(asset.key, sprite);
           URL.revokeObjectURL(pixelImage.src);
           continue;
         }
