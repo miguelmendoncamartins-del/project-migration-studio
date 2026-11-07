@@ -1,4 +1,5 @@
 const Phaser = globalThis.Phaser;
+import { fighterFrame, joystickVector, usesTouchControls, skillSoundProfile } from './animation-rules.js';
 import { campaigns, getCampaignForCharacter } from './campaigns.js';
 import { allySprite, characterSprite, loadSpriteImages, resolveSpriteAsset } from './sprite-assets.js';
 import {
@@ -170,6 +171,12 @@ const state = {
   effects: [],
   particles: [],
   keys: new Set(),
+  touchMove: { x: 0, y: 0 },
+  moving: false,
+  motionTime: 0,
+  skillSlot: -1,
+  skillStarted: 0,
+  touchAttacking: false,
   elapsed: 0,
   attackCooldown: 0,
   invulnerable: 0,
@@ -1077,6 +1084,8 @@ function useSkill(slot) {
   state.player.energy -= skill.energy;
   state.cooldowns[skill.id] = skill.cooldown / 1000;
   state.player.attackTimer = skill.duration;
+  state.skillSlot = slot;
+  state.skillStarted = state.elapsed;
   state.screenShake = skill.tier === 'supreme' || skill.tier === 'awakening' ? 7 : 3;
   activateSkill(skill);
   updateInterface(true);
@@ -1163,7 +1172,28 @@ function activateSkill(skill) {
   if (affected) checkBattleEnd();
   state.battleMessage = affected ? `${skill.name} atingiu ${affected} ${affected === 1 ? 'alvo' : 'alvos'}.` : `${skill.name} executado.`;
   $('#battle-message').textContent = state.battleMessage;
-  playTone(skill.tier === 'supreme' || skill.tier === 'awakening' ? 510 : 320, 0.12);
+  playSkillSound(state.skillSlot);
+}
+
+function playSkillSound(slot) {
+  if (!state.sound) return;
+  try {
+    audioContext ||= new AudioContext();
+    audioContext.resume();
+    const profile = skillSoundProfile(selectedCharacter().id, Math.max(0, slot));
+    for (let i = 0; i < profile.pulses; i += 1) {
+      const now = audioContext.currentTime + i * 0.055;
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      oscillator.type = profile.wave;
+      oscillator.frequency.setValueAtTime(profile.frequency * (1 + i * 0.2), now);
+      oscillator.frequency.exponentialRampToValueAtTime(profile.frequency * 0.4, now + 0.14);
+      gain.gain.setValueAtTime(0.045, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      oscillator.connect(gain).connect(audioContext.destination);
+      oscillator.start(now); oscillator.stop(now + 0.16);
+    }
+  } catch { /* Optional audio. */ }
 }
 
 function isInFacingRange(enemy, range, forwardDot = 0.45) {
@@ -1332,6 +1362,9 @@ function update(dt, timestamp) {
   state.particles = state.particles.filter((particle) => particle.time > 0);
   state.player.energy = Math.min(state.player.maxEnergy, state.player.energy + dt * 7.2);
   state.player.attackTimer = Math.max(0, state.player.attackTimer - dt);
+  if (!state.player.attackTimer) state.skillSlot = -1;
+  state.moving = false;
+  if (state.touchAttacking) performBasicAttack();
   state.player.hitFlash = Math.max(0, state.player.hitFlash - dt);
   const statuses = state.player.statuses;
   for (const key of ['freeze', 'slow', 'confuse', 'burn']) statuses[key] = Math.max(0, statuses[key] - dt);
@@ -1356,11 +1389,15 @@ function update(dt, timestamp) {
     }
     let moveX = Number(state.keys.has('d') || state.keys.has('arrowright')) - Number(state.keys.has('a') || state.keys.has('arrowleft'));
     let moveY = Number(state.keys.has('s') || state.keys.has('arrowdown')) - Number(state.keys.has('w') || state.keys.has('arrowup'));
+    moveX += state.touchMove.x; moveY += state.touchMove.y;
     if (player.statuses.freeze > 0) moveX = moveY = 0;
     if (player.statuses.confuse > 0) { moveX *= -1; moveY *= -1; }
-    const magnitude = Math.hypot(moveX, moveY) || 1;
+    const magnitude = Math.max(1, Math.hypot(moveX, moveY));
     moveX /= magnitude;
     moveY /= magnitude;
+    const moving = Math.abs(moveX) + Math.abs(moveY) > 0.01;
+    if (state.lastMoving !== moving) state.motionTime = 0;
+    state.moving = moving; state.lastMoving = moving; state.motionTime += dt;
     if (player.body) {
       player.body.setVelocity(moveX * 190 * (player.statuses.slow > 0 ? 0.55 : 1), moveY * 155 * (player.statuses.slow > 0 ? 0.55 : 1));
     } else if (moveX || moveY) {
@@ -1716,12 +1753,13 @@ function drawFighter(x, y, color, isPlayer, scale = 1, facingX = 1, hitFlash = 0
   ctx.scale(facingX < 0 ? -1 : 1, 1);
   ctx.imageSmoothingEnabled = false;
   const baseSprite = getPreparedSprite(spriteAsset);
-  const sprite = baseSprite?.isPixelSheet && animation && baseSprite.attackFrame ? baseSprite.attackFrame : baseSprite;
+  const motion = fighterFrame({ attacking: Boolean(animation), moving: isPlayer ? state.moving : Boolean(spriteAsset && state.enemies.find((enemy) => enemy.spriteAsset === spriteAsset)?.body?.speed > 1), elapsed: isPlayer ? state.motionTime : state.elapsed, slot: isPlayer ? state.skillSlot : -1 });
+  const sprite = baseSprite?.frames?.[motion.action]?.[motion.index] || (baseSprite?.isPixelSheet && animation && baseSprite.attackFrame ? baseSprite.attackFrame : baseSprite);
   if (sprite) {
     const ratio = sprite.width / sprite.height;
     const targetHeight = (sprite.isPixelSheet || baseSprite.isPixelSheet ? 120 : 104) * scale;
     const targetWidth = Math.min(targetHeight * ratio, (baseSprite.isPixelSheet ? 260 : 78) * scale);
-    if (baseSprite.isPixelSheet && !animation) { const breathe = 1 + Math.sin(state.elapsed * 5 + x) * 0.02; ctx.scale(1 / breathe, breathe); }
+    if (baseSprite.isPixelSheet && !baseSprite.frames && !animation) { const breathe = 1 + Math.sin(state.elapsed * 5 + x) * 0.02; ctx.scale(1 / breathe, breathe); }
     const drawnHeight = Math.min(targetHeight, targetWidth / ratio);
     const frame = Math.floor(state.elapsed * (animation ? 12 : 5)) % 4;
     const scalePulse = animation ? 1 + (frame % 2) * 0.035 : 1;
@@ -2062,7 +2100,49 @@ function handleKeyDown(event) {
   if (!event.repeat && key === 'e') requestAssist();
 }
 function handleKeyUp(event) { state.keys.delete(event.key.toLowerCase()); }
-window.addEventListener('blur', () => state.keys.clear());
+function clearInputs() { state.keys.clear(); state.touchMove = { x: 0, y: 0 }; state.touchAttacking = false; }
+window.addEventListener('blur', clearInputs);
+document.addEventListener('visibilitychange', () => { if (document.hidden) clearInputs(); });
+
+const joystick = $('#touch-joystick');
+const stick = $('#joystick-stick');
+let joystickPointer = null;
+function moveJoystick(event) {
+  const rect = joystick.getBoundingClientRect();
+  const vector = joystickVector(event.clientX - rect.left - rect.width / 2, event.clientY - rect.top - rect.height / 2);
+  state.touchMove = vector;
+  stick.style.transform = `translate(${vector.x * 30}px, ${vector.y * 30}px)`;
+}
+joystick.addEventListener('pointerdown', (event) => {
+  if (joystickPointer !== null) return;
+  event.preventDefault(); joystickPointer = event.pointerId; joystick.setPointerCapture(event.pointerId); moveJoystick(event);
+});
+joystick.addEventListener('pointermove', (event) => { if (event.pointerId === joystickPointer) moveJoystick(event); });
+function releaseJoystick(event) {
+  if (event.pointerId !== joystickPointer) return;
+  joystickPointer = null; state.touchMove = { x: 0, y: 0 }; stick.style.transform = '';
+}
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach((type) => joystick.addEventListener(type, releaseJoystick));
+document.querySelectorAll('[data-touch-action]').forEach((button) => {
+  button.addEventListener('pointerdown', (event) => {
+    event.preventDefault(); button.setPointerCapture(event.pointerId);
+    const action = button.dataset.touchAction;
+    if (action === 'attack') { state.touchAttacking = true; performBasicAttack(); }
+    else if (action === 'interact') interactWithStoryObjective();
+    else if (action === 'assist') requestAssist();
+    else useSkill(Number(action));
+  });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((type) => button.addEventListener(type, () => { if (button.dataset.touchAction === 'attack') state.touchAttacking = false; }));
+});
+function adaptControls() {
+  const mobile = usesTouchControls(window.innerWidth, window.innerHeight, window.matchMedia('(pointer: coarse)').matches);
+  document.body.classList.toggle('touch-mode', mobile);
+  $('#touch-controls').hidden = !mobile;
+  $('#game').setAttribute('aria-label', mobile ? 'Arena de combate com joystick e botões de ataque' : 'Arena de combate. WASD move e J ataca.');
+  clearInputs(); stick.style.transform = ''; joystickPointer = null;
+}
+window.addEventListener('resize', adaptControls);
+adaptControls();
 $('#power-row').addEventListener('click', (event) => {
   const button = event.target.closest('[data-slot]');
   if (button && !button.disabled) useSkill(Number(button.dataset.slot));
