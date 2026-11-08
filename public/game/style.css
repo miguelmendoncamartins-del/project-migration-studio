@@ -189,6 +189,9 @@ h1 { margin: 5px 0 0; font: 700 27px/.95 'Barlow Condensed', sans-serif; }
 .touch-mode .canvas-frame { overflow: visible; aspect-ratio: auto; max-height: none; }
 .touch-mode #game { height: auto; aspect-ratio: 16 / 9; }
 .touch-mode .fight-header { flex-wrap: wrap; }
+.touch-mode .game-layout { grid-template-columns: minmax(0, 1fr); }
+.touch-mode .arena-column, .touch-mode .canvas-frame, .touch-mode #game { min-width: 0; max-width: 100%; }
+.touch-mode #game canvas { max-width: 100%; }
 .touch-mode .fighter-hud { grid-template-columns: 1fr; gap: 12px; }
 .touch-mode .fighter-name { flex-wrap: wrap; }
 .touch-mode .arena-toast { white-space: normal; width: max-content; max-width: calc(100% - 24px); text-align: center; }
