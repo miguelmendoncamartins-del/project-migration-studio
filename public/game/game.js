@@ -1756,7 +1756,9 @@ function drawFighter(x, y, color, isPlayer, scale = 1, facingX = 1, hitFlash = 0
   ctx.imageSmoothingEnabled = false;
   const baseSprite = getPreparedSprite(spriteAsset);
   const motion = fighterFrame({ attacking: Boolean(animation), moving: isPlayer ? state.moving : Boolean(spriteAsset && state.enemies.find((enemy) => enemy.spriteAsset === spriteAsset)?.body?.speed > 1), elapsed: isPlayer ? state.motionTime : state.elapsed, slot: isPlayer ? state.skillSlot : -1 });
-  const sprite = baseSprite?.frames?.[motion.action]?.[motion.index] || (baseSprite?.isPixelSheet && animation && baseSprite.attackFrame ? baseSprite.attackFrame : baseSprite);
+  const skillFrames = motion.action === 'special' ? baseSprite?.frames?.[`skill-${state.skillSlot}`] : null;
+  const skillIndex = Math.floor(Math.max(0, state.elapsed - state.skillStarted) * 12) % 4;
+  const sprite = skillFrames?.[skillIndex] || baseSprite?.frames?.[motion.action]?.[motion.index] || (baseSprite?.isPixelSheet && animation && baseSprite.attackFrame ? baseSprite.attackFrame : baseSprite);
   if (sprite) {
     const ratio = sprite.width / sprite.height;
     const targetHeight = (sprite.isPixelSheet || baseSprite.isPixelSheet ? 120 : 104) * scale;

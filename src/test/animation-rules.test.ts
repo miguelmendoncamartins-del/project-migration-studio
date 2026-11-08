@@ -36,7 +36,7 @@ describe('Character motion and mobile controls', () => {
     for (const category of ['Protagonista', 'Boss-Secundário', 'Chefe-Final', 'Chefe-Secreto']) {
       for (const file of readdirSync(join(root, category)).filter(f => f.endsWith('.png'))) {
         count++;
-        for (const action of ['idle', 'walk', 'special']) {
+        for (const action of ['idle', 'walk', 'special', 'skill-0', 'skill-1', 'skill-2', 'skill-3']) {
           const path = join(root, 'animations', category, file.slice(0, -4), `${action}.png`);
           expect(existsSync(path)).toBe(true);
           const bytes = readFileSync(path); expect(bytes.readUInt32BE(16)).toBe(1024); expect(bytes.readUInt32BE(20)).toBe(320);
