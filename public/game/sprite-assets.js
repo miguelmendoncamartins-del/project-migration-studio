@@ -296,7 +296,7 @@ export function preparePixelSheet(image) {
 
 async function loadAnimationFrames(asset, base) {
   base.frames = {};
-  await Promise.all(['idle', 'walk', 'special'].map(async (action) => {
+  await Promise.all(['idle', 'walk', 'special', 'skill-0', 'skill-1', 'skill-2', 'skill-3'].map(async (action) => {
     const image = new Image();
     image.src = new URL(`./pixel-sprites/animations/${asset.directory}/${asset.name}/${action}.png`, document.baseURI).href;
     await image.decode();

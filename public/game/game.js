@@ -875,6 +875,7 @@ function resetBattle(mode = state.mode) {
   state.jotaroAwakened = false;
   state.player = { x: 380, y: 320, facingX: 1, facingY: 0, hp: 100, maxHp: 100, energy: 100, maxEnergy: 100, attackTimer: 0, hitFlash: 0, statuses: { freeze: 0, slow: 0, confuse: 0, burn: 0, burnTick: 0 }, physicsZone: null, body: null };
   state.cooldowns = {};
+  state.skillSlot = -1; state.motionTime = 0; state.moving = false; clearInputs();
   state.effects = [];
   state.particles = [];
   state.attackCooldown = 0;
@@ -1039,6 +1040,7 @@ function performBasicAttack() {
   if (!state.fightActive || performance.now() < state.cinematicUntil || state.attackCooldown > 0) return;
   state.attackCooldown = 0.42;
   state.player.attackTimer = 0.28;
+  state.skillSlot = -1;
   state.screenShake = 2;
   const player = state.player;
   let hit = false;
@@ -1754,7 +1756,9 @@ function drawFighter(x, y, color, isPlayer, scale = 1, facingX = 1, hitFlash = 0
   ctx.imageSmoothingEnabled = false;
   const baseSprite = getPreparedSprite(spriteAsset);
   const motion = fighterFrame({ attacking: Boolean(animation), moving: isPlayer ? state.moving : Boolean(spriteAsset && state.enemies.find((enemy) => enemy.spriteAsset === spriteAsset)?.body?.speed > 1), elapsed: isPlayer ? state.motionTime : state.elapsed, slot: isPlayer ? state.skillSlot : -1 });
-  const sprite = baseSprite?.frames?.[motion.action]?.[motion.index] || (baseSprite?.isPixelSheet && animation && baseSprite.attackFrame ? baseSprite.attackFrame : baseSprite);
+  const skillFrames = motion.action === 'special' ? baseSprite?.frames?.[`skill-${state.skillSlot}`] : null;
+  const skillIndex = Math.floor(Math.max(0, state.elapsed - state.skillStarted) * 12) % 4;
+  const sprite = skillFrames?.[skillIndex] || baseSprite?.frames?.[motion.action]?.[motion.index] || (baseSprite?.isPixelSheet && animation && baseSprite.attackFrame ? baseSprite.attackFrame : baseSprite);
   if (sprite) {
     const ratio = sprite.width / sprite.height;
     const targetHeight = (sprite.isPixelSheet || baseSprite.isPixelSheet ? 120 : 104) * scale;
@@ -2077,6 +2081,8 @@ function updatePowerRow() {
     const status = cooldown > 0 ? `${cooldown.toFixed(1)} s · ${skill.energy} EN` : `${skill.range} P · ${skill.energy} EN`;
     button.classList.toggle('locked', !unlocked);
     button.disabled = !(unlocked && cooldown <= 0 && state.player.energy >= skill.energy && state.fightActive);
+    const touchButton = document.querySelector(`[data-touch-action="${index}"]`);
+    if (touchButton) { touchButton.disabled = button.disabled; touchButton.title = skill.name; touchButton.setAttribute('aria-label', skill.name); }
     button.title = `${skill.name} · ${unlocked ? `${skill.energy} energia, alcance ${skill.range}` : lockedText}`;
     const label = unlocked ? status : lockedText;
     const small = button.querySelector('small');

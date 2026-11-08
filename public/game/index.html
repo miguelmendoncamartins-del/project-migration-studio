@@ -61,6 +61,19 @@
             <button class="attack-button" id="attack-button" type="button" aria-label="Atacar o oponente">⚔ ATACAR <span>J</span></button>
           </div>
 
+          <div class="touch-controls" id="touch-controls" hidden aria-label="Controles de celular">
+            <div class="touch-joystick" id="touch-joystick" role="group" aria-label="Joystick de movimento"><span class="joystick-stick" id="joystick-stick"></span></div>
+            <div class="touch-actions">
+              <button type="button" class="touch-action touch-attack" data-touch-action="attack" aria-label="Atacar">⚔</button>
+              <button type="button" class="touch-action" data-touch-action="interact" aria-label="Interagir">✋</button>
+              <button type="button" class="touch-action" data-touch-action="assist" aria-label="Pedir assistência">✦</button>
+              <button type="button" class="touch-action touch-skill" data-touch-action="0" aria-label="Habilidade 1">1</button>
+              <button type="button" class="touch-action touch-skill" data-touch-action="1" aria-label="Habilidade 2">2</button>
+              <button type="button" class="touch-action touch-skill" data-touch-action="2" aria-label="Habilidade 3">3</button>
+              <button type="button" class="touch-action touch-skill" data-touch-action="3" aria-label="Habilidade 4">4</button>
+            </div>
+          </div>
+
           <div class="fighter-hud">
             <div class="player-status">
               <div class="fighter-name"><span class="stand-indicator"></span><strong id="fighter-name">JOTARO KUJO</strong><span id="form-name">STAR PLATINUM</span></div>
