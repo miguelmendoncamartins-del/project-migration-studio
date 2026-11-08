@@ -10,4 +10,5 @@
 <!-- LOVABLE:END -->
 
 - The imported Phaser game lives as static files in public/game and is shown full-screen from the home page; edit gameplay there, not in React, to preserve the original game structure.
-- Original character sheets in public/game/pixel-sprites mirror the reference categories and filenames; each sheet has idle on the left and attack on the right, loaded by sprite-assets.js instead of reference portraits.
+- Character animation strips live in public/game/pixel-sprites/animations with category/name/idle, walk and special PNGs using four fixed cells; sprite-assets.js loads them with legacy two-pose fallback to prevent neighboring-frame bleed.
+- Share animation selection, joystick normalization and screen-size detection through animation-rules.js so desktop and touch controls use the same gameplay actions and testable rules.
