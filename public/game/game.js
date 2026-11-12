@@ -1540,6 +1540,8 @@ function spawnBurst(x, y, color, type) {
 function drawBackground() {
   const revengeMap = state.mode === 'final' && state.secretRunPhase?.startsWith('revenge');
   const theme = state.mode === 'campaign' || revengeMap ? state.storyStage?.palette : null;
+  const stage = state.storyStage;
+  const part = state.mode === 'campaign' ? selectedCampaign()?.part : revengeMap ? currentSecretCampaign()?.part : 0;
   const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
   gradient.addColorStop(0, theme?.wall || (state.mode === 'final' ? '#282b34' : '#3c4a3d'));
   gradient.addColorStop(0.52, theme?.ground || (state.mode === 'final' ? '#36343a' : '#53604a'));
@@ -1547,20 +1549,7 @@ function drawBackground() {
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  ctx.fillStyle = theme?.wall || (state.mode === 'final' ? '#22272c' : '#333f35');
-  ctx.fillRect(0, 32, canvas.width, 104);
-  for (let building = 0; building < 13; building += 1) {
-    const x = building * 78 - 12;
-    const height = 38 + ((building * 37) % 55);
-    ctx.fillStyle = building % 2 ? (theme?.ground || '#626457') : (theme?.wall || '#515c50');
-    ctx.fillRect(x, 135 - height, 65, height);
-    ctx.fillStyle = '#333c37';
-    ctx.fillRect(x + 3, 135 - height, 58, 4);
-    for (let window = 0; window < 4; window += 1) {
-      ctx.fillStyle = state.mode === 'final' ? '#c5a95744' : `${theme?.accent || '#ddcf92'}80`;
-      ctx.fillRect(x + 9 + (window % 2) * 27, 145 - height + Math.floor(window / 2) * 19, 8, 10);
-    }
-  }
+  drawRegionalHorizon(part, stage, theme);
   ctx.fillStyle = state.mode === 'final' ? '#44454a' : '#766f5c';
   ctx.fillRect(0, 135, canvas.width, 8);
   ctx.fillStyle = '#30392f';
@@ -1588,11 +1577,112 @@ function drawBackground() {
     ctx.fillStyle = '#ddd8c10e';
     ctx.fillRect(x, 169, 1, 340);
   }
-  drawPlanter(120, 202);
-  drawPlanter(838, 191);
-  drawPlanter(872, 404);
+  drawRegionalGround(part, stage, theme);
   drawStoryLandmarks(theme);
   drawDepthRails();
+}
+
+// Cada Parte tem silhuetas e marcas de terreno próprias. A fase altera a
+// disposição sem depender de aleatoriedade, para o mapa permanecer legível.
+function drawRegionalHorizon(part, stage, theme) {
+  const wall = theme?.wall || '#333f35';
+  const ground = theme?.ground || '#626457';
+  const accent = theme?.accent || '#ddcf92';
+  const seed = [...(stage?.id || 'arena')].reduce((value, char) => value + char.charCodeAt(0), 0);
+  ctx.fillStyle = wall;
+  ctx.fillRect(0, 32, canvas.width, 104);
+  if (part === 2 || part === 7 || (part === 3 && stage?.id.includes('ndoul'))) {
+    // Ruínas e dunas: horizonte baixo, sem fachadas urbanas genéricas.
+    for (let i = 0; i < 9; i += 1) {
+      const x = i * 122 - 24;
+      const h = 20 + ((seed + i * 19) % 38);
+      ctx.fillStyle = i % 2 ? ground : wall;
+      ctx.beginPath(); ctx.moveTo(x, 135); ctx.lineTo(x + 27, 135 - h); ctx.lineTo(x + 92, 135); ctx.closePath(); ctx.fill();
+      if ((seed + i) % 3 === 0) { ctx.fillStyle = `${accent}66`; ctx.fillRect(x + 45, 132 - h, 3, 5); }
+    }
+    if (part === 7) {
+      ctx.fillStyle = '#3d5357'; ctx.fillRect(0, 54, canvas.width, 19);
+      ctx.fillStyle = '#a8b7a766'; ctx.fillRect(0, 54, canvas.width, 2);
+    }
+    return;
+  }
+  if (part === 6) {
+    // Green Dolphin Street: blocos de concreto, guaritas e arame no alto.
+    for (let i = 0; i < 8; i += 1) {
+      const x = i * 126 - 12;
+      ctx.fillStyle = i % 2 ? ground : wall; ctx.fillRect(x, 57 + (i % 3) * 7, 108, 78);
+      ctx.fillStyle = '#282e30'; ctx.fillRect(x + 9, 72, 23, 50); ctx.fillRect(x + 43, 72, 23, 50);
+      ctx.fillStyle = `${accent}55`; ctx.fillRect(x + 14, 78, 3, 39); ctx.fillRect(x + 49, 78, 3, 39);
+    }
+    ctx.strokeStyle = '#aeb3a566'; ctx.lineWidth = 1;
+    for (let x = 0; x < canvas.width; x += 14) { ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x + 10, 50); ctx.stroke(); }
+    return;
+  }
+  if (part === 9 || part === 4 || part === 8) {
+    // Bairros reconhecíveis, com alturas e cores variadas por capítulo.
+    for (let i = 0; i < 11; i += 1) {
+      const x = i * 94 - 8; const h = 34 + ((seed + i * 23) % 46);
+      ctx.fillStyle = i % 2 ? ground : wall; ctx.fillRect(x, 135 - h, 82, h);
+      ctx.fillStyle = '#222a27'; ctx.fillRect(x + 5, 135 - h, 72, 4);
+      for (let w = 0; w < 3; w += 1) {
+        ctx.fillStyle = `${accent}77`; ctx.fillRect(x + 12 + w * 22, 102 + ((i + w) % 2) * 15, 9, 12);
+      }
+      if (part === 9) { ctx.fillStyle = '#315947'; ctx.fillRect(x + 68, 88, 5, 31); ctx.fillRect(x + 58, 86, 23, 5); }
+      if (part === 8 && i % 3 === 0) { ctx.fillStyle = '#d2d7d0'; ctx.fillRect(x + 30, 66, 25, 69); }
+    }
+    return;
+  }
+  if (part === 5) {
+    // Fachadas italianas e campanário ao fundo.
+    for (let i = 0; i < 10; i += 1) {
+      const x = i * 102 - 8; const h = 48 + ((seed + i * 17) % 48);
+      ctx.fillStyle = i % 2 ? ground : wall; ctx.fillRect(x, 135 - h, 91, h);
+      ctx.fillStyle = `${accent}88`; ctx.fillRect(x + 13, 103 - (h % 18), 13, 20); ctx.fillRect(x + 55, 103 - (h % 18), 13, 20);
+      ctx.fillStyle = '#39352f'; ctx.fillRect(x + 37, 119, 17, 16);
+    }
+    if (stage?.id.includes('diavolo') || stage?.id.includes('boss')) {
+      ctx.fillStyle = wall; ctx.fillRect(445, 27, 72, 108); ctx.fillRect(430, 42, 102, 12);
+    }
+    return;
+  }
+  if (part === 3) {
+    // Telhados e cúpulas do Cairo; interiores da mansão ganham colunas.
+    for (let i = 0; i < 10; i += 1) {
+      const x = i * 104 - 10; const h = 32 + ((seed + i * 13) % 40);
+      ctx.fillStyle = i % 2 ? ground : wall; ctx.fillRect(x, 135 - h, 94, h);
+      ctx.fillStyle = `${accent}66`; ctx.fillRect(x + 12, 109 - (h % 12), 9, 13); ctx.fillRect(x + 40, 109 - (h % 12), 9, 13);
+      if (i % 3 === 1) { ctx.beginPath(); ctx.arc(x + 68, 135 - h, 13, Math.PI, 0); ctx.fill(); }
+    }
+    return;
+  }
+  // Partes 1: mansões e vilas inglesas, com telhados inclinados.
+  for (let i = 0; i < 9; i += 1) {
+    const x = i * 120 - 15; const h = 42 + ((seed + i * 11) % 39);
+    ctx.fillStyle = i % 2 ? ground : wall; ctx.fillRect(x + 10, 135 - h, 88, h);
+    ctx.fillStyle = '#34383a'; ctx.beginPath(); ctx.moveTo(x, 136 - h); ctx.lineTo(x + 54, 103 - h); ctx.lineTo(x + 110, 136 - h); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = `${accent}77`; ctx.fillRect(x + 27, 112, 11, 15); ctx.fillRect(x + 69, 112, 11, 15);
+  }
+}
+
+function drawRegionalGround(part, stage, theme) {
+  const seed = [...(stage?.id || 'arena')].reduce((value, char) => value + char.charCodeAt(0), 0);
+  const accent = theme?.accent || '#b9aa72';
+  if (part === 1 || part === 4 || part === 8 || part === 9) {
+    drawPlanter(120, 202); drawPlanter(838, 191); drawPlanter(872, 404);
+  }
+  if (part === 2 || part === 3 || part === 7 || part === 9) {
+    for (let i = 0; i < 25; i += 1) {
+      const x = (i * 113 + seed * 7) % canvas.width;
+      const y = 173 + ((i * 67 + seed) % 340);
+      ctx.fillStyle = i % 2 ? `${accent}20` : '#171b1b20';
+      ctx.fillRect(x, y, 9 + (i % 4) * 3, 2);
+      if (part === 9 && i % 4 === 0) { ctx.fillStyle = '#315a3b99'; ctx.fillRect(x, y - 7, 3, 8); ctx.fillRect(x - 4, y - 8, 11, 3); }
+    }
+  }
+  if (part === 6) {
+    ctx.fillStyle = '#252d2d88';
+    for (let x = 36; x < canvas.width; x += 112) ctx.fillRect(x, 174, 3, 354);
+  }
 }
 
 function drawStoryLandmarks(theme) {
